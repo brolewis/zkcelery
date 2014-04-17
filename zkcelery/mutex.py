@@ -82,8 +82,6 @@ class MutexTask(celery.Task):
             if mutex_acquired:
                 return super(MutexTask, self).apply_async(args, kwargs,
                                                           **options)
-            else:
-                print 'oops'
 
     def __call__(self, *args, **kwargs):
         '''Direct method call.'''
