@@ -43,13 +43,11 @@ class LockTask(celery.Task):
                 if success:
                     yield
                 else:
-                    print '-RETRY-'
                     self.retry(**kwargs)
             else:
                 yield success
         except kazoo.exceptions.KazooException:
             if retry:
-                print '-RETRY-'
                 self.retry(**kwargs)
             else:
                 yield False
