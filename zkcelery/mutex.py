@@ -9,6 +9,7 @@ import time
 # Third Party
 import kazoo.client
 import celery
+import celery.exceptions
 
 
 class MutexTask(celery.Task):
@@ -57,8 +58,7 @@ class MutexTask(celery.Task):
                     success = True
             else:
                 success = True
-        except kazoo.exceptions.KazooException as exc:
-            print 'Error stopping execution: %s' % (exc)
+        except kazoo.exceptions.KazooException:
             yield False
         else:
             if success:
@@ -67,13 +67,12 @@ class MutexTask(celery.Task):
                 if delete:
                     client.delete(lock_node)
             else:
-                print 'This task has been locked.'
                 yield False
         finally:
             try:
                 client.stop()
                 client.close()
-            except kazoo.exceptions.KazooException as exc:
+            except kazoo.exceptions.KazooException:
                 pass
 
     def apply_async(self, args=None, kwargs=None, **options):
@@ -82,6 +81,9 @@ class MutexTask(celery.Task):
             if mutex_acquired:
                 return super(MutexTask, self).apply_async(args, kwargs,
                                                           **options)
+            else:
+                raise celery.exceptions.Reject('Task already running',
+                                               requeue=False)
 
     def __call__(self, *args, **kwargs):
         '''Direct method call.'''
@@ -95,6 +97,9 @@ class MutexTask(celery.Task):
             with self.mutex(args, kwargs, delete=True) as mutex_acquired:
                 if mutex_acquired:
                     ret = super(MutexTask, self).__call__(*args, **kwargs)
+                else:
+                    raise celery.exceptions.Reject('Task already running',
+                                                   requeue=False)
             return ret
         else:
             return super(MutexTask, self).__call__(*args, **kwargs)

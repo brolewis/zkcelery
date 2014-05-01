@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 '''ZooKeeper Data Viewer'''
 # Standard Library
 import sys           # Command line arguments
