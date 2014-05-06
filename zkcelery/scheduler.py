@@ -10,7 +10,7 @@ import celery.utils.log
 logger = celery.utils.log.get_logger(__name__)
 
 
-class Scheduler(celery.beat.PersistentScheduler):
+class EarlyMutexScheduler(celery.beat.PersistentScheduler):
     def apply_async(self, entry, publisher=None, **kwargs):
         entry = self.reserve(entry)
         task = self.app.tasks.get(entry.task)
