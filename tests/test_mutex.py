@@ -4,7 +4,7 @@ import celery
 import app
 
 if __name__ == '__main__':
-    for x in xrange(1, 4, 2):
+    for x in xrange(1, 6, 2):
         try:
             app.test_mutex.delay(x, x+1)
         except celery.exceptions.Reject as exc:

@@ -90,7 +90,13 @@ def semaphore_retry(self, x, y):
         print 'ALL DONE: %s' % (x + y)
 
 
+@app.task(base=zkcelery.EarlyMutexTask)
+def test_early_mutex(x, y):
+    print 'test_mutex: %s' % (x + y)
+    time.sleep(150)
+
+
 @app.task(base=zkcelery.MutexTask)
 def test_mutex(x, y):
     print 'test_mutex: %s' % (x + y)
-    time.sleep(150)
+    time.sleep(10)
