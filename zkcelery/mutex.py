@@ -48,7 +48,7 @@ class EarlyMutexTask(celery.Task):
         timeout = items.get('mutex_timeout') or global_timeout or 3600
         success = False
         try:
-            hosts = conf.ZOOKEEPER_HOSTS
+            hosts = getattr(conf, 'ZOOKEEPER_HOSTS', '127.0.0.1:2181')
             client = kazoo.client.KazooClient(hosts=hosts)
             client.start()
             lock_node = self._get_node(args, kwargs)
@@ -118,7 +118,7 @@ class EarlyMutexTask(celery.Task):
         '''Remove mutex for given args and kwargs.'''
         client = None
         try:
-            hosts = self.app.conf.ZOOKEEPER_HOSTS
+            hosts = getattr(self.app.conf, 'ZOOKEEPER_HOSTS', '127.0.0.1:2181')
             client = kazoo.client.KazooClient(hosts=hosts)
             client.start()
             lock_node = self._get_node(args, kwargs)
@@ -161,7 +161,7 @@ class MutexTask(celery.Task):
         '''Creates the mutex locks and yields the mutex status.'''
         client = lock = None
         try:
-            hosts = self.app.conf.ZOOKEEPER_HOSTS
+            hosts = getattr(self.app.conf, 'ZOOKEEPER_HOSTS', '127.0.0.1:2181')
             client = kazoo.client.KazooClient(hosts=hosts)
             client.start()
             lock_node = self._get_node(args, kwargs)

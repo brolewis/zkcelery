@@ -1,4 +1,4 @@
-'''LockTask'''
+'''Celery Abstract Class Lock Task'''
 # Standard Library
 import contextlib
 # Third Party
@@ -8,7 +8,18 @@ import kazoo.client
 
 class LockTask(celery.Task):
     '''
-    Lock task to prevent/restrict concurrent execution within a task.
+    LockTask is a Celery abstract class that provides to context managers for
+    manipulating locks and semaphores. The easiest way to access the context
+    managers is to set `bind` to `True`:
+
+    .. code-block:: python
+
+        import zkcelery
+
+        @app.task(base=zkcelery.LockTask, bind=True)
+        def locking_task(self, data):
+            with self.lock() as lock_acquired:
+                do_work(data)
     '''
     abstract = True
 
@@ -29,7 +40,7 @@ class LockTask(celery.Task):
             # uri) we want to make it into a non-reserved character.
             node_path += u'.%s' % (value.replace('/', u'\u2044'))
         client = lock = None
-        hosts = self._get_app().conf.ZOOKEEPER_HOSTS
+        hosts = getattr(self.app.conf, 'ZOOKEEPER_HOSTS', '127.0.0.1:2181')
         try:
             client = kazoo.client.KazooClient(hosts=hosts)
             client.start()
@@ -61,36 +72,42 @@ class LockTask(celery.Task):
     @contextlib.contextmanager
     def lock(self, *args, **kwargs):
         '''
+        lock(self, identifier='', blocking=False, retry=False, *args, **kwargs)
+
         Set ZooKeeper lock.
-            Optional parameters:
-                - identifier (unicode) - Identifier used by ZooKeeper to
-                                         identify each instance of the lock.
-                                         The default is {id}->{hostname}.
-                - blocking (boolean) - Determines if the lock should be
-                                       blocking. Defaults to False.
-                - *args  - List of values to use to refine the lock.
-                - retry (boolean) - If a non-blocking lock cannot be required,
-                                    retry. Defaults to False
-                - **kwargs - Any arguments to be passed to self.retry().
+
+        :param identifier: Identifier used by ZooKeeper to identify each
+                           instance of the lock. The default is
+                           {id}->{hostname}.
+        :param blocking: Determines if the lock should be blocking. The
+                         default is `False`.
+        :param retry: If set to `True`, and `blocking` set to False, a task
+                      where the lock was not acquired is retried.
+        :param \*args: List of values to use to refine the lock.
+        :param \**kwargs: Any arguments to be apssed to self.retry().
         '''
+        kwargs['identifier'] = identifier
+        kwargs['blocking'] = blocking
+        kwargs['retry'] = retry
         return self._lock(args, kwargs, use_lock=True)
 
     @contextlib.contextmanager
     def semaphore(self, *args, **kwargs):
         '''
+        semaphore(self, max_leases=1, identifier='', blocking=False, retry=False, \*args, \**kwargs)
+
         Set ZooKeeper semaphore.
-            Optional parameters:
-                - max_leases (integer) - Number of concurrent leases to allow.
-                                         Defaults to 1.
-                - identifier (unicode) - Identifier used by ZooKeeper to
-                                         identify each instance of the
-                                         semaphore.  The default is
-                                         {id}->{hostname}.
-                - blocking (boolean) - Determines if the semaphore should be
-                                       blocking. Defaults to False.
-                - *args  - List of values to use to refine the semaphore.
-                - retry (boolean) - If a non-blocking semaphore cannot be
-                                    required, retry. Defaults to False
-                - **kwargs - Any arguments to be passed to self.retry().
+
+        :param max_leases: Number of concurrent leases to allow. The
+                           default is 1.
+        :param identifier: Identifier used by ZooKeeper to identify each
+                           instance of the lock. The default is
+                           {id}->{hostname}.
+        :param blocking: Determines if the lock should be blocking. The
+                         default is `False`.
+        :param retry: If set to `True`, and `blocking` set to False, a task
+                      where the lock was not acquired is retried.
+        :param \*args: List of values to use to refine the lock.
+        :param \**kwargs: Any arguments to be apssed to self.retry().
         '''
         return self._lock(args, kwargs)
