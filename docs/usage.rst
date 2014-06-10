@@ -74,3 +74,35 @@ While the default lock acquisition is non-blocking, there can be use cases where
     If `blocking` is set to `True`, `retry` is forced to `False`.
 
 When using ``semaphore``, the number of leases can be set by using `max_leases`.
+
+Mutex
+=====
+ZKCelery provides a Celery abstract task that allows a distributed mutex to be used. By default the mutex prevents multiple tasks of the same name from executing at the exact time. If a second task attempts to run while the mutex is held, a Reject error is raised and the task is concluded.
+
+.. code-block:: python
+
+    import zkcelery
+
+    @app.task(base=zkcelery.MutexTask)
+    def mutex_task(self, data):
+        do_work(data)
+
+If a task should be requeued when rejected, an option parameter may be provided: mutex_requeue. By setting this value to `True` the task will be requeued when rejected.
+
+.. code-block:: python
+
+    import zkcelery
+
+    @app.task(base=zkcelery.MutexTask, mutex_requeue=True)
+    def mutex_task(self, data):
+        do_work(data)
+
+If the mutex needed additional refinement, a list of keys can be provided that match the names in the function call so that the values of those arguments can help refine the mutex.
+
+.. code-block:: python
+
+    import zkcelery
+
+    @app.task(base=zkcelery.MutexTask, mutex_keys=('server_name',))
+    def mutex_task(self, server_name, data):
+        do_work(data)
